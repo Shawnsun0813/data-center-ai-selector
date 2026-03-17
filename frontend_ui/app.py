@@ -70,19 +70,17 @@ st.markdown("""
         border-right: 2px solid #111111;
     }
     [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span:not(:has(svg)),
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] div:not([data-testid="stIcon"]) {
+    [data-testid="stSidebar"] h3 {
         color: #111111 !important;
         font-family: 'Space Mono', monospace !important;
     }
-    /* Explicitly protect icons from font override */
-    [data-testid="stSidebar"] [data-testid="stIcon"], 
-    [data-testid="stSidebar"] i, 
-    [data-testid="stSidebar"] svg {
+    /* Explicitly protect icons/svgs from any potential accidental override */
+    [data-testid="stSidebar"] svg,
+    [data-testid="stSidebar"] i,
+    [data-testid="stIcon"] {
         font-family: inherit !important;
     }
 
@@ -271,6 +269,51 @@ st.markdown("""
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: #cccccc; }
+    /* ── Radar Animation ── */
+    .radar-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        background: #fdfdfd;
+        border: 1px solid #111111;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .radar-pulse {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: #00c8ff;
+        border-radius: 50%;
+        animation: radar-pulse 3s infinite linear;
+    }
+    .radar-scan-line {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(to bottom, transparent, #00c8ff, transparent);
+        top: 0;
+        animation: radar-scan 2.5s infinite linear;
+    }
+    @keyframes radar-pulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(30); opacity: 0; }
+    }
+    @keyframes radar-scan {
+        0% { top: 0%; }
+        100% { top: 100%; }
+    }
+    .radar-label {
+        font-family: 'Space Mono', monospace;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: #111111;
+        z-index: 10;
+        background: rgba(255,255,255,0.8);
+        padding: 5px 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -279,9 +322,13 @@ import importlib
 import orchestrator
 importlib.reload(orchestrator)
 from orchestrator import SiteSelectionSupervisor
-
 # Always create a fresh supervisor to pick up latest code changes
 st.session_state.supervisor = SiteSelectionSupervisor()
+
+# Import recommendation engine
+from core_engine import recommendation_engine
+importlib.reload(recommendation_engine)
+from core_engine.recommendation_engine import recommend_hotspots
 
 def run_analysis(lat, lon, weights, llm_config=None):
     targets = [(lat, lon)]
@@ -333,9 +380,10 @@ def main():
             "api_key": llm_api_key
         }
         if llm_api_key:
-            st.success("✅ LLM Connected")
+            st.success("✅ PRO TIER ACTIVE")
         else:
-            st.info("ℹ️ Rule-based fallback active")
+            st.warning("🔒 PRO TIER LOCKED")
+            st.info("ℹ️ Using rule-based fallback. Upgrade to Pro for autonomous AI rationales.")
         st.markdown("---")
 
     # ── Page Title ──
@@ -372,7 +420,7 @@ def main():
         st.sidebar.markdown(f"<span class='accent-label'>{k}</span> — {v*100:.0f}%", unsafe_allow_html=True)
 
     # ── Tabs ──
-    tab1, tab2 = st.tabs(["SINGLE SITE ANALYSIS", "MULTI-SITE COMPARISON"])
+    tab1, tab2, tab3 = st.tabs(["SINGLE SITE ANALYSIS", "MULTI-SITE COMPARISON", "SMART REGION SEARCH"])
 
     # ════════════════════════════════════════════
     with tab1:
@@ -473,7 +521,14 @@ def main():
                             st.warning(f"💰 **Warren Buffett**\n\n{live_r['buffett']}")
                             st.error(f"🎨 **Steve Jobs**\n\n{live_r['jobs']}")
                     else:
-                        st.markdown("<p class='cyan' style='font-size:0.85rem;font-family:Space Mono,monospace'>Rule-Based Rationale — Add API key in sidebar for live AI insights</p>", unsafe_allow_html=True)
+                        st.markdown(
+                            "<div style='background:#fff0f3; border:1px solid #ff4b4b; padding:15px; margin-bottom:15px'>"
+                            "<h4 style='color:#ff4b4b; margin:0; font-family:Space Grotesk,sans-serif'>🔒 PRO TIER FEATURE</h4>"
+                            "<p style='margin:5px 0 0; font-size:0.85rem'>Autonomous AI Expert Rationales are locked. "
+                            "Upgrade to Pro & add API Key to unlock GPT-4o Insights.</p></div>", 
+                            unsafe_allow_html=True
+                        )
+                        st.markdown("<p style='font-size:0.75rem; color:#888; font-family:Space Mono,monospace'>Falling back to Rule-Based Metrics Analysis:</p>", unsafe_allow_html=True)
                         rationales = res['rationale'].split(" | ")
                         expert_data = {
                             "Expert":   ["🚀 Elon Musk",     "💰 Warren Buffett", "🌍 Bill Gates",    "🎨 Steve Jobs"],
@@ -543,6 +598,25 @@ def main():
                 res_b = run_analysis(lat_b, lon_b, weights)
 
                 if res_a is not None and res_b is not None:
+                    # ROI Explosion Banner
+                    delta_opex = res_a['opex_10yr_m'] - res_b['opex_10yr_m']
+                    better_site = name_b if delta_opex > 0 else name_a
+                    savings = abs(delta_opex)
+                    
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(90deg, #001f3f 0%, #00c8ff 100%); 
+                                padding: 25px; border-radius: 0; color: white; margin: 20px 0;
+                                border-left: 10px solid #111; box-shadow: 0 4px 15px rgba(0,200,255,0.3)">
+                        <h3 style="color: white; margin: 0; font-family: 'Space Grotesk', sans-serif; letter-spacing: 2px;">🚀 ROI EXPLOSION</h3>
+                        <p style="margin: 10px 0 0; font-family: 'Space Mono', monospace; font-size: 1.1rem;">
+                            Choosing <strong>{better_site.upper()}</strong> over the alternative saves approximately 
+                            <span style="font-size: 1.5rem; font-weight: 800; color: #fff;">${savings:.1f}M</span> 
+                            in operational costs over the next 10 years.
+                        </p>
+                        <p style="margin: 5px 0 0; font-size: 0.75rem; opacity: 0.8;">[Supervisor Insight: ROI Optimization Mode Active]</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                     st.markdown("<hr>", unsafe_allow_html=True)
                     st.markdown("### DECISION MATRIX")
                     st.markdown("<p class='cyan' style='font-size:0.85rem;font-family:Space Mono,monospace'>Weighted Scoring — Six-Pillar Assessment</p>", unsafe_allow_html=True)
@@ -589,6 +663,77 @@ def main():
                         <span class='cyan' style='font-size:0.9rem'>&nbsp;— Superior by {margin:.1f} pts</span>
                     </div>
                     """, unsafe_allow_html=True)
+
+    # ════════════════════════════════════════════
+    with tab3:
+        section_header("SMART REGION SCANNER", "AI-driven hotspot discovery for any city.")
+        
+        c_scan, c_info = st.columns([1, 1])
+        with c_scan:
+            st.markdown("<span class='accent-label'>🏙️ Target City Scan</span>", unsafe_allow_html=True)
+            scan_city = st.text_input("Enter city for scanner", value="Newark, NJ", placeholder="e.g. Philadelphia, PA", key="scan_city", label_visibility="collapsed")
+            
+            st.info("💡 **Demo Tip**: High-fidelity GIS zoning active for **NY/NJ/PA**. Try 'Newark' or 'Philadelphia' for real-world land use filtering.")
+            
+            density = st.select_slider("Scan Density (Grid Size)", options=[4, 6, 8, 10], value=6)
+            st.caption(f"Scanner will evaluate {density**2} coordinates within municipal boundaries.")
+            
+            scan_btn = st.button("EXECUTE REGION SCAN", key="scan_btn")
+            
+        with c_info:
+            st.markdown("""
+            <div style='background:#f8f8f8; padding:20px; border:1px solid #ddd'>
+                <p style='margin:0; font-size:0.85rem'>
+                    The <strong>Smart Scanner</strong> performs a multi-stage discovery:
+                    <br><br>
+                    1. <strong>Spatial Filtering</strong>: Immediately rejects non-industrial zones using the local GIS database.
+                    <br>2. <strong>Grid Analysis</strong>: Parallel scoring of power, connectivity, and risk.
+                    <br>3. <strong>Hotspot Ranking</strong>: Identifies top 3 high-feasibility sites.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if scan_btn and scan_city:
+            # Show animated radar during scan
+            radar_placeholder = st.empty()
+            radar_placeholder.markdown(f"""
+                <div class="radar-container">
+                    <div class="radar-scan-line"></div>
+                    <div class="radar-pulse"></div>
+                    <div class="radar-pulse" style="animation-delay: 1.5s"></div>
+                    <div class="radar-label">📡 SCANNING {scan_city.upper()}...</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Perform actual scan (the pipeline is now async/parallel)
+            hotspots = recommend_hotspots(scan_city, grid_size=density, top_n=3)
+            
+            # Remove radar and show results
+            radar_placeholder.empty()
+            
+            if hotspots:
+                st.success(f"Successfully identified {len(hotspots)} hotspots in {scan_city}!")
+                
+                # Visualize on Map
+                map_df = pd.DataFrame([{'lat': h['latitude'], 'lon': h['longitude'], 'name': h['address']} for h in hotspots])
+                st.map(map_df, zoom=11)
+                
+                # Display Rankings
+                for i, h in enumerate(hotspots):
+                    with st.expander(f"🏆 HOTSPOT #{i+1}: Score {h['total_score']:.1f} — {h['address'][:60]}..."):
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Power Capacity", f"{h['power_capacity_mw']} MW")
+                        m2.metric("PUE (Predicted)", f"{h['live_pue']:.2f}")
+                        m3.metric("Water Stability", h['water_availability'])
+                        
+                        st.write(f"**Detailed Zone:** {h['zoning_type']} ({h['permit_status']})")
+                        if st.button(f"RUN DEEP ANALYSIS FOR SITE #{i+1}"):
+                            st.session_state["lat1"] = h['latitude']
+                            st.session_state["lon1"] = h['longitude']
+                            st.info("Switching to SINGLE SITE tab for deep analysis...")
+                            # Note: Streamlit usually requires a rerun or JS trigger to switch tabs programmatically
+            else:
+                st.error("No industrial/commercial feasible sites found in this grid density. Try increasing density or picking a different city.")
 
 if __name__ == "__main__":
     main()
