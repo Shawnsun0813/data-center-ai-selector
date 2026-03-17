@@ -326,8 +326,8 @@ from orchestrator import SiteSelectionSupervisor
 st.session_state.supervisor = SiteSelectionSupervisor()
 
 # Import recommendation engine
-from core_engine import recommendation_engine
-importlib.reload(recommendation_engine)
+import core_engine.recommendation_engine as rec_engine
+importlib.reload(rec_engine)
 from core_engine.recommendation_engine import recommend_hotspots
 
 def run_analysis(lat, lon, weights, llm_config=None):
@@ -549,6 +549,15 @@ def main():
                                 f"${res['opex_10yr_m']:.1f}M",
                                 res['zoning_type'],
                                 res['permit_status'],
+                            ],
+                            "Source": [
+                                "PJM / NYISO Real-time",
+                                "Regional Utility Maps",
+                                "Grid-level Carbon Track (Live)",
+                                "Climate Data (NOAA)",
+                                "Proprietary ROI Engine",
+                                "NY/NJ/PA GIS Database",
+                                "Local Municipal Records"
                             ]
                         })
                         st.table(spec_df)
