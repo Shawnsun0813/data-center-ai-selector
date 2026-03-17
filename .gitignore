@@ -1,0 +1,42 @@
+# Python environments
+.env
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit
+.streamlit/
+*.webm
+*.mp4
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Sensitive Keys & Credentials
+*.key
+*.pem
+*.rsa
+
+# Data Caches & Large GIS Files
+data_pipeline/cache/
+*.parquet
+*.shp
+*.shx
+*.dbf
+*.prj
+*.csv
+
+# Temporary files
+*.log
+tmp/
+temp/
