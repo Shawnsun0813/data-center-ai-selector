@@ -69,9 +69,21 @@ st.markdown("""
         background-color: #f5f5f5;
         border-right: 2px solid #111111;
     }
-    [data-testid="stSidebar"] * {
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span:not(:has(svg)),
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] div:not([data-testid="stIcon"]) {
         color: #111111 !important;
         font-family: 'Space Mono', monospace !important;
+    }
+    /* Explicitly protect icons from font override */
+    [data-testid="stSidebar"] [data-testid="stIcon"], 
+    [data-testid="stSidebar"] i, 
+    [data-testid="stSidebar"] svg {
+        font-family: inherit !important;
     }
 
     /* ── Main Title ── */
